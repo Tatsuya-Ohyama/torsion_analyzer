@@ -22,6 +22,11 @@ from mods.func_prompt_io import check_exist, check_overwrite
 
 
 
+# =============== constant =============== #
+ROUND_DIGIT = 3
+
+
+
 # =============== class =============== #
 class Structure:
 	def __init__(self, topology_file, list_mask_axis, list_mask_dihedral):
@@ -180,10 +185,10 @@ class Axis:
 		n_vec1 = self.get_nvector(vec1)
 		n_vec2 = self.get_nvector(vec2)
 
-		ip = np.inner(n_vec1, n_vec2)
-		norm = np.linalg.norm(n_vec1) * np.linalg.norm(n_vec2)
-		angle = np.rad2deg(np.arccos(np.clip(ip / norm, -1.0, 1.0)))
-		return angle
+		angle = np.arccos(np.clip(np.dot(n_vec1, n_vec2), -1.0, 1.0)) * (180 / np.pi)
+		if 90 < angle:
+			angle = 180 - angle
+		return np.round(angle, ROUND_DIGIT)
 
 
 
