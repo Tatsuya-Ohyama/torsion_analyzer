@@ -39,6 +39,13 @@ class Structure:
 		self._obj_topology = parmed.load_file(topology_file)
 		self._list_atom_idx_axis = [list(parmed.amber.AmberMask(self._obj_topology, mask).Selected()) for mask in list_mask_axis]
 		self._list_atom_idx_dihedral = [list(parmed.amber.AmberMask(self._obj_topology, mask).Selected()) for mask in list_mask_dihedral]
+
+		list_check = [i for i, list_atom_idx in enumerate(self._list_atom_idx_dihedral) if len(list_atom_idx) != 2]
+		if len(list_check) != 0:
+			sys.stderr.write("ERROR: atom pairs in the following atom mask are not found:\n")
+			for i in list_check:
+				sys.stderr.write("      * {0}\n".format(list_mask_dihedral[i]))
+			sys.exit(1)
 		if len(self._list_atom_idx_axis[0]) != 1:
 			self._is_midpoint = False
 
