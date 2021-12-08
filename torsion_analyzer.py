@@ -243,6 +243,7 @@ if __name__ == '__main__':
 			sys.exit(1)
 		obj_trajectory = MDAnalysis.Universe(args.TOPOLOGY_FILE, args.COORDINATE_FILE)
 		frame = -1
+		n_offset = 0
 		for obj_frame in tqdm.tqdm(obj_trajectory.trajectory, ascii=True):
 			frame += 1
 			if args.BEGIN is not None and args.BEGIN > frame:
@@ -251,11 +252,10 @@ if __name__ == '__main__':
 			if args.END is not None and args.END < frame:
 				break
 
-			if args.OFFSET is not None:
-				n_offset += 1
-				if n_offset != args.OFFSET:
-					continue
-				n_offset = 0
+			n_offset += 1
+			if n_offset != args.OFFSET:
+				continue
+			n_offset = 0
 
 			list_dihedrals.append([frame] + obj_structure.get_dihedrals(obj_frame.positions))
 

@@ -51,6 +51,9 @@ Copyright (c) 2021 Tatsuya Ohyama
 
 
 ## ChangeLog
+### Ver. 1.3 (2021-12-08)
+* `--offset` オプションの有無に関わらず、offset に関するエラーが出るバグを修正した。
+
 ### Ver. 1.2 (2021-12-01)
 * Ambermask の原子が見つからない場合にエラーメッセージを出すようにした。
 
