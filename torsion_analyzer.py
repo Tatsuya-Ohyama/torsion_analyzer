@@ -248,7 +248,7 @@ if __name__ == '__main__':
 			if args.BEGIN is not None and args.BEGIN > frame:
 				continue
 
-			if args.END is not NOne and args.END < frame:
+			if args.END is not None and args.END < frame:
 				break
 
 			if args.OFFSET is not None:
