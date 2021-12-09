@@ -40,9 +40,16 @@ class Structure:
 		self._list_atom_idx_axis = [list(parmed.amber.AmberMask(self._obj_topology, mask).Selected()) for mask in list_mask_axis]
 		self._list_atom_idx_dihedral = [list(parmed.amber.AmberMask(self._obj_topology, mask).Selected()) for mask in list_mask_dihedral]
 
+		list_check = [i for i, list_atom_idx in enumerate(self._list_atom_idx_axis) if len(list_atom_idx) != 2]
+		if len(list_check) != 0:
+			sys.stderr.write("ERROR: atom pairs of axis in the following atom mask are not found:\n")
+			for i in list_check:
+				sys.stderr.write("      * {0}\n".format(list_mask_axis[i]))
+			sys.exit(1)
+
 		list_check = [i for i, list_atom_idx in enumerate(self._list_atom_idx_dihedral) if len(list_atom_idx) != 2]
 		if len(list_check) != 0:
-			sys.stderr.write("ERROR: atom pairs in the following atom mask are not found:\n")
+			sys.stderr.write("ERROR: atom pairs of torsion in the following atom mask are not found:\n")
 			for i in list_check:
 				sys.stderr.write("      * {0}\n".format(list_mask_dihedral[i]))
 			sys.exit(1)
@@ -141,11 +148,12 @@ class Axis:
 			# 仮の中心軸ベクトル
 			u = np.array(coords[1]) - np.array(coords[0])
 			if np.linalg.norm(u) == 0.0:
+				# 距離 0 は同じ点なので、無視
 				continue
 
 			sum_L = 0
 			for coord in coordinates:
-				# 各点で回す
+				# 各点で回す (特定の点 vs 他の点)
 
 				# 点までのベクトル
 				v = np.array(coord) - np.array(coords[0])
@@ -153,8 +161,8 @@ class Axis:
 				# 中心軸から点までの最短距離
 				L = np.linalg.norm(np.cross(u, v) / np.linalg.norm(u))
 				sum_L += L
-			results.append([sum_L, coords, u])
-		results = sorted(results, key=lambda x:x[0])[0]
+			results.append([sum_L, coords, u])	# [[すべての点に対する距離の総和(float), 座標, ベクトル], ...]
+		results = sorted(results, key=lambda x:x[0])[0]	# 距離の総和が小さい座標を採用する
 		self._coords = results[1]
 		self._vector = results[2]
 		return self
@@ -192,9 +200,17 @@ class Axis:
 		n_vec1 = self.get_nvector(vec1)
 		n_vec2 = self.get_nvector(vec2)
 
-		angle = np.arccos(np.clip(np.dot(n_vec1, n_vec2), -1.0, 1.0)) * (180 / np.pi)
-		if 90 < angle:
-			angle = 180 - angle
+		outer = np.cross(n_vec1, n_vec2)
+		direction = 0
+		if outer[2] > 0:
+			# Z 成分が + の場合、そのままの角度として解釈
+			direction = 1
+
+		else:
+			# Z 成分が - の場合、180〜360 度として解釈
+			direction = -1
+
+		angle = np.arccos(np.clip(np.dot(n_vec1, n_vec2), -1.0, 1.0)) * (180 / np.pi) * direction
 		return np.round(angle, ROUND_DIGIT)
 
 
