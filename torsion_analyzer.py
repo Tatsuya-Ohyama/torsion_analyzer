@@ -88,6 +88,7 @@ class Structure:
 		"""
 		coords_axis = None
 		if self._is_midpoint == False:
+			# when given coordinates are not mid points, calculate mid point coordinates
 			mid_points = []
 			for list_atom_idx in self._list_atom_idx_axis:
 				coords = coordinates[list_atom_idx][:]
@@ -96,7 +97,7 @@ class Structure:
 					mass = np.array([self._obj_topology.atoms[atom_idx].mass for atom_idx in list_atom_idx])
 					coords = coords * np.array([mass]).T
 					n = np.sum(mass)
-				mid_points.append(np.mean(coords, axis=0) / n)
+				mid_points.append(np.sum(coords, axis=0) / n)
 			coords_axis = np.array(mid_points)
 		else:
 			coords_axis = coordinates[[atom_idx for list_atom_idx in self._list_atom_idx_axis for atom_idx in list_atom_idx]][:]
@@ -109,6 +110,8 @@ class Axis:
 	def __init__(self, coordinates=None):
 		self._vector = None
 		self._coords = []
+
+		self._norm_vector = None
 
 		if coordinates is not None:
 			self.determine_axis_vector(coordinates)
@@ -135,7 +138,7 @@ class Axis:
 		Method to determine axis vector and coordinates
 
 		Args:
-			coordinates (ndarray): [[x1, y1, z1], ...]
+			candidates of axis coordinates (ndarray): [[x1, y1, z1], ...]
 
 		Returns:
 			tuple: ([x1(np.float), y1(np.float), z1(np.float)], [x2(np.float), y2(np.float), z2(np.float)])
@@ -165,12 +168,13 @@ class Axis:
 		results = sorted(results, key=lambda x:x[0])[0]	# 距離の総和が小さい座標を採用する
 		self._coords = results[1]
 		self._vector = results[2]
+		self._norm_vector = np.linalg.norm(self._vector)
 		return self
 
 
-	def get_nvector(self, coordinate):
+	def get_coord_on_axis(self, coordinate):
 		"""
-		Method to get normal vector for given coordinate
+		Method to get coordinate on axis
 
 		Args:
 			coordinate (ndarray or list): [x(np.float), y(np.float), z(np.float)]
@@ -179,9 +183,11 @@ class Axis:
 			ndarray: [x(np.float), y(np.float), z(np.float)]
 		"""
 		v = np.array(coordinate) - self._coords[0]
-		w = np.cross(self._vector, v)
-		w_norm = np.linalg.norm(w)
-		return w / w_norm
+		norm_v = np.linalg.norm(v)
+		cos = np.clip(np.dot(self._vector, v) / (self._norm_vector * norm_v), -1.0, 1.0)
+		l = norm_v * cos
+		new_coord = l / self._norm_vector * self._vector
+		return new_coord + self._coords[0]
 
 
 	def get_dihedral(self, coordinate1, coordinate2):
@@ -195,12 +201,12 @@ class Axis:
 		Returns:
 			float: dihedral angle
 		"""
-		vec1 = np.array(coordinate1)
-		vec2 = np.array(coordinate2)
-		n_vec1 = self.get_nvector(vec1)
-		n_vec2 = self.get_nvector(vec2)
+		vec1 = np.array(coordinate1) - self.get_coord_on_axis(coordinate1)
+		norm_vec1 = np.linalg.norm(vec1)
+		vec2 = np.array(coordinate2) - self.get_coord_on_axis(coordinate2)
+		norm_vec2 = np.linalg.norm(vec2)
 
-		outer = np.cross(n_vec1, n_vec2)
+		outer = np.cross(vec1, vec2)
 		direction = 0
 		if outer[2] > 0:
 			# Z 成分が + の場合、そのままの角度として解釈
@@ -210,7 +216,7 @@ class Axis:
 			# Z 成分が - の場合、180〜360 度として解釈
 			direction = -1
 
-		angle = np.arccos(np.clip(np.dot(n_vec1, n_vec2), -1.0, 1.0)) * (180 / np.pi) * direction
+		angle = np.rad2deg(np.arccos(np.clip(np.dot(vec1, vec2) / (norm_vec1 * norm_vec2), -1.0, 1.0))) * direction
 		return np.round(angle, ROUND_DIGIT)
 
 
